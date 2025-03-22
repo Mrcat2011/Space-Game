@@ -1,0 +1,336 @@
+#include "raylib.h"
+#include "../inc/Space.hpp"
+#include "../inc/Enemy.hpp"
+#include "../inc/Bullet.hpp"
+#include <vector>
+#include <algorithm>
+#include <fstream>
+#include <iostream>
+
+const int screenHeight = 720;
+const int screenWidth = 1200;
+const char* title = "Space";
+
+const char* SpaceImagePath = "assets/Space.png";    
+const char* BackgroundImagePath = "assets/bck.png";
+const char* BackgroundMusicPath = "assets/bacground.mp3";
+const char* DeathMusic = "assets/death.mp3";
+const char* SoundOnButton = "assets/sound-on.png";
+const char* SoundOffButton = "assets/sound-off.png";
+const char* MusicOnButton = "assets/music-on.png";
+const char* MusicOffButton = "assets/music-off.png";
+const char* Clock = "assets/race-icon.png";
+const char* Endless = "assets/endless.png";
+const char* MeteorKillSound = "assets/kill3.wav";
+const char* SpaceKilledSound = "assets/kill1.wav";
+const char* MenuMusic = "assets/menuMusic.wav";
+
+Color darkBlue = {1, 7, 28, 255};
+
+bool isPlayMusic = true;
+bool IsPlaySound = true;
+int score = 0;
+float gameTimer = 60.0f;
+
+enum State {
+    GAME,
+    MENU,
+    DIFFICULTY,
+    MODE_SELECTION,
+    QUIT
+};
+
+enum Difficulty {
+    EASY,
+    MEDIUM,
+    HARD
+};
+
+enum GameMode {
+    TIMED,
+    ENDLESS
+};
+
+void Read(std::ofstream &file, int k) {
+    if (file.is_open()) {
+      file << k << "\n";
+    } else {
+      std::cerr << "Error: File is not open.\n";
+    }
+}
+
+int GetEndHighScore() {
+    std::ifstream file("Data/score.txt", std::ios::app);
+    std::string line;
+    std::string high_score;
+    while (getline(file, line)) {
+      high_score = line;
+    }
+    file.close();
+    return !high_score.empty() ? std::stoi(high_score) : 0;
+}
+
+int GetMaxScore(const std::string &filePath) {
+    std::ifstream inFile(filePath);
+    if (!inFile.is_open()) {
+      std::cerr << "Error: File is not open!\n";
+      return 0;
+    }
+  
+    int maxScore = 0, score;
+    while (inFile >> score) {
+      maxScore = std::max(maxScore, score);
+    }
+  
+    inFile.close();
+    return maxScore;
+}
+
+void DrawButton(Rectangle rect, const char* text, Color color, Vector2 pos_text) {
+    //DrawRectangleRec(rect, BLACK);
+    DrawRectangleRounded(rect, 0.3, 0, color);
+    DrawText(text, pos_text.x, pos_text.y, 40, WHITE);
+}
+
+int main(int argc, char const *argv[]) {
+    InitWindow(screenWidth, screenHeight, title);
+    InitAudioDevice();
+
+    //Camera2D camera = { 0 };
+    
+    if (!FileExists("Data/score.txt")) {
+        std::ofstream initFile("Data/score.txt");
+        if (initFile.is_open()) {
+          initFile << "0\n";
+          initFile.close();
+        }
+    }
+
+    std::ofstream score_data("Data/score.txt", std::ios::app);
+    int high_score = GetMaxScore("Data/score.txt");
+
+    Texture2D text = LoadTexture(BackgroundImagePath);
+    Music music1 = LoadMusicStream(BackgroundMusicPath);
+    Music music2 = LoadMusicStream(MenuMusic);
+    Sound death_sound = LoadSound(DeathMusic);
+    Sound meteorKillSound = LoadSound(MeteorKillSound);
+    Sound spaceKilledSound = LoadSound(SpaceKilledSound);
+
+    Texture2D sound_on = LoadTexture(SoundOnButton);
+    Texture2D sound_off = LoadTexture(SoundOffButton);
+    Texture2D music_on = LoadTexture(MusicOnButton);
+    Texture2D music_off = LoadTexture(MusicOffButton);
+    
+    PlayMusicStream(music1);
+    PlayMusicStream(music2);
+    SetTargetFPS(60);
+    
+    Color playButtonColor = BLACK;
+    Color quitButtonColor = BLACK;
+
+    State state = MENU;
+    Difficulty currentDifficulty = MEDIUM;
+    GameMode gameMode = TIMED;
+    
+    Space space(SpaceImagePath, {GetScreenWidth() / 2, GetScreenHeight() - 120}, 0.3);
+    /*camera.target = space.getPos();
+    camera.offset = { screenWidth / 2.0f, screenHeight / 2.0f };
+    camera.rotation = 0.0f;
+    camera.zoom = 1.0f;*/
+    EnemyManager enemyManager(0.5f);
+    EnemyManager menuManager(1.0f);
+    std::vector<Bullet> bullets;
+    
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+
+        if (state == GAME) {
+            ClearBackground(BLACK);
+            DrawTexture(text, 0, 0, WHITE);
+            //BeginMode2D(camera);
+
+            if (isPlayMusic) {
+                UpdateMusicStream(music1);
+            }
+
+            if (gameMode == TIMED) {
+                gameTimer -= GetFrameTime();
+                if (gameTimer <= 0) {
+                    state = MENU;
+                }
+            }
+
+            space.Draw();
+            space.Update();
+            enemyManager.Update(bullets, space, IsPlaySound, meteorKillSound, spaceKilledSound, 0);  
+            enemyManager.Draw();
+            //camera.target.y = space.getPos().y;
+
+            if (!space.IsAlive()) {  
+                score_data << score << std::endl;
+                high_score = GetMaxScore("Data/score.txt");
+                if (IsPlaySound) {
+                    PlaySound(death_sound);
+                }
+                state = MENU;
+                score = 0;
+                gameTimer = 60.0f;
+                enemyManager.getEnemies().clear();
+                bullets.clear();
+                space.Reset();
+                
+                StopMusicStream(music1);
+                PlayMusicStream(music1);
+            }
+            
+
+            if (IsKeyPressed(KEY_SPACE) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                Vector2 bullet_pos = {space.getPos().x + 35, space.getPos().y - 15};
+                bullets.emplace_back(bullet_pos);
+            }
+
+            for (auto& bullet : bullets) {
+                bullet.Update();
+                bullet.Draw();
+            }
+
+            bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [](Bullet& b) { return b.IsOffScreen(); }), bullets.end());
+            
+            for (auto& bullet : bullets) {
+                for (auto& enemy : enemyManager.getEnemies()) {
+                    if (CheckCollisionRecs(bullet.GetRect(), enemy.GetRect())) {
+                        score++;
+                        enemy.Destroy();
+                        if (IsPlaySound) {
+                            PlaySound(meteorKillSound);
+                        }
+                        bullet.Destroy();
+                    }
+                }
+            }
+
+            enemyManager.getEnemies().erase(std::remove_if(enemyManager.getEnemies().begin(), enemyManager.getEnemies().end(), [](Enemy& e) { return e.IsDestroyed(); }), enemyManager.getEnemies().end());
+            bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [](Bullet& b) { return b.IsDestroyed(); }), bullets.end());
+
+            DrawText(TextFormat("Score: %d", score), 10, 10, 30, WHITE);
+            if (gameMode == TIMED) {
+                DrawText(TextFormat("Time: %.1f", gameTimer), 10, 50, 30, WHITE);
+                DrawText(TextFormat("Health: %d", space.getHealth()), 10, 90, 30, WHITE);
+            } else {
+                DrawText(TextFormat("Health: %d", space.getHealth()), 10, 50, 30, WHITE);
+            }
+            //EndMode2D();
+        } else if (state == MENU) {
+            ClearBackground(darkBlue);
+
+            menuManager.Update(bullets, space, IsPlaySound, meteorKillSound, spaceKilledSound, 1);  
+            menuManager.Draw();
+
+            DrawText("SPACE", GetScreenWidth() / 2 - 150, GetScreenHeight() / 2 - 200, 100, WHITE);
+            
+            Rectangle playButton = {screenWidth / 2 - 100, screenHeight / 2, 200, 50};
+            Rectangle quitButton = {screenWidth / 2 - 100, screenHeight / 2 + 70, 200, 50};
+            DrawButton(playButton, "Play", playButtonColor, {screenWidth / 2 - 70, screenHeight / 2 + 10});
+            DrawButton(quitButton, "Quit", quitButtonColor, {screenWidth / 2 - 70, screenHeight / 2 + 80});
+
+            std::string highScore = "HIGH SCORE : " + std::to_string(high_score);
+            DrawText(highScore.c_str(), 0, 0, 50, WHITE);
+
+            if (isPlayMusic) {
+                UpdateMusicStream(music2);
+            }
+
+            
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                Vector2 mouse_pos = GetMousePosition();
+                if (mouse_pos.x >= 5 && mouse_pos.x <= 55 && mouse_pos.y >= screenHeight - 50 && mouse_pos.y <= screenHeight) {
+                    if (IsPlaySound) {
+                        IsPlaySound = false;
+                    } else {
+                        IsPlaySound = true;
+                    }
+                }
+            }
+
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                Vector2 mouse_pos = GetMousePosition();
+                if (mouse_pos.x >= 65 && mouse_pos.x <= 115 && mouse_pos.y >= screenHeight - 50 && mouse_pos.y <= screenHeight) {
+                    if (isPlayMusic) {
+                        isPlayMusic = false;
+                    } else {
+                        isPlayMusic = true;
+                    }
+                }
+            }
+
+            if (IsPlaySound) {
+                DrawTexture(sound_on, 5, screenHeight - 50, WHITE);
+            } else {
+                DrawTexture(sound_off, 5, screenHeight - 50, WHITE);
+            }
+
+            if (isPlayMusic) {
+                DrawTexture(music_on, 60, screenHeight - 50, WHITE);
+            } else {
+                DrawTexture(music_off, 60, screenHeight - 50, WHITE);
+            }
+         
+
+            
+            Vector2 mouse_pos2 = GetMousePosition();
+            if (CheckCollisionPointRec(mouse_pos2, playButton)) {
+                playButtonColor = RED;
+            } else {
+                playButtonColor = BLACK;
+            } 
+            if (CheckCollisionPointRec(mouse_pos2, quitButton)) {
+                quitButtonColor = RED;
+            } else {
+                quitButtonColor = BLACK;
+            }
+
+
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                Vector2 mousePos = GetMousePosition();
+                if (CheckCollisionPointRec(mousePos, playButton)) {
+                    state = MODE_SELECTION;
+                } else if (CheckCollisionPointRec(mousePos, quitButton)) {
+                    CloseWindow();
+                }
+            }
+        } else if (state == MODE_SELECTION) {
+            ClearBackground(darkBlue);
+            //DrawText("Select Mode", GetScreenWidth() / 2 - 200, GetScreenHeight() / 2 - 200, 100, WHITE);
+            
+            Rectangle timedButton = {0, 0, screenWidth, 200};
+            Rectangle endlessButton = {0, 220, screenWidth, 200};
+            DrawButton(timedButton, "Timed Mode", darkBlue, {200, 100});
+            DrawButton(endlessButton, "Endless Mode", darkBlue, {200, 320});
+
+            static Texture2D clock = LoadTexture(Clock);
+            static Texture2D endless = LoadTexture(Endless);
+
+            DrawTexture(clock, screenWidth - 250, 10, WHITE);
+            DrawTexture(endless, screenWidth - 250, 230, WHITE);
+
+            DrawLine(0, 200, screenWidth, 200, WHITE);
+            DrawLine(0, 420, screenWidth, 420, WHITE);
+            
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                Vector2 mousePos = GetMousePosition();
+                if (CheckCollisionPointRec(mousePos, timedButton)) {
+                    gameMode = TIMED;
+                    state = GAME;
+                } else if (CheckCollisionPointRec(mousePos, endlessButton)) {
+                    gameMode = ENDLESS;
+                    state = GAME;
+                }
+            }
+        }
+        
+        EndDrawing();
+    }
+    CloseAudioDevice();
+    CloseWindow();
+    return 0;
+}
