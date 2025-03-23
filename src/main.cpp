@@ -26,6 +26,7 @@ const char* SpaceKilledSound = "assets/kill1.wav";
 const char* MenuMusic = "assets/menuMusic.wav";
 const char* CoinImagPath = "assets/coin.png";
 const char* SpeedImagPath = "assets/sped.png";
+const char* PowerUpSound = "assets/powerUp2.wav";
 
 
 Color darkBlue = {1, 7, 28, 255};
@@ -35,7 +36,8 @@ bool IsPlaySound = true;
 int score = 0;
 int coin = 0;
 float gameTimer = 60.0f;
-int speedLevel = 0;
+int speedLevel = 1;
+int healthLevel = 0;
 
 enum State {
     GAME,
@@ -97,6 +99,17 @@ int GetSpeedLevel () {
     return !high_score.empty() ? std::stoi(high_score) : 0;
 }
 
+int GetHealthLevel () {
+    std::ifstream file("Data/HealthLevel.txt", std::ios::app);
+    std::string line;
+    std::string high_score;
+    while (getline(file, line)) {
+      high_score = line;
+    }
+    file.close();
+    return !high_score.empty() ? std::stoi(high_score) : 0;
+}
+
 int GetMaxScore(const std::string &filePath) {
     std::ifstream inFile(filePath);
     if (!inFile.is_open()) {
@@ -139,6 +152,8 @@ int main(int argc, char const *argv[]) {
     coin = GetCoin();
     std::ofstream speed_data("Data/SpeedLevel.txt", std::ios::app);
     speedLevel = GetSpeedLevel();
+    std::ofstream health_data("Data/HealthLevel.txt", std::ios::app);
+    healthLevel = GetHealthLevel();
 
     Texture2D text = LoadTexture(BackgroundImagePath);
     Music music1 = LoadMusicStream(BackgroundMusicPath);
@@ -146,6 +161,7 @@ int main(int argc, char const *argv[]) {
     Sound death_sound = LoadSound(DeathMusic);
     Sound meteorKillSound = LoadSound(MeteorKillSound);
     Sound spaceKilledSound = LoadSound(SpaceKilledSound);
+    Sound power_up = LoadSound(PowerUpSound);
 
     Texture2D sound_on = LoadTexture(SoundOnButton);
     Texture2D sound_off = LoadTexture(SoundOffButton);
@@ -177,7 +193,7 @@ int main(int argc, char const *argv[]) {
     Difficulty currentDifficulty = MEDIUM;
     GameMode gameMode = TIMED;
     
-    Space space(SpaceImagePath, {GetScreenWidth() / 2, GetScreenHeight() - 120}, 0.3);
+    Space space(SpaceImagePath, {GetScreenWidth() / 2, GetScreenHeight() - 120}, 0.3, healthLevel);
     /*camera.target = space.getPos();
     camera.offset = { screenWidth / 2.0f, screenHeight / 2.0f };
     camera.rotation = 0.0f;
@@ -523,6 +539,7 @@ int main(int argc, char const *argv[]) {
                     state = SHOP;
                 } else if (CheckCollisionPointRec(mousePos, UpgradeButton) && coin >= cost_of_speed_powerup && speedLevel < 3) {
                     coin -= cost_of_speed_powerup;
+                    PlaySound(power_up);
                     coin_data << coin << std::endl;
                     speedLevel++;
                     speed_data << speedLevel << std::endl;

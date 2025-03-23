@@ -1,8 +1,9 @@
 #include "../inc/Space.hpp"
 
-Space::Space(const char* imagepath, Vector2 _pos, float scale) {
+Space::Space(const char* imagepath, Vector2 _pos, float scale, int HealthLevel) {
     pos = _pos;
     pos2 = _pos;
+    health = HealthLevel * 3;
     
     Image img = LoadImage(imagepath);
     ImageResize(&img, img.width * scale, img.height * scale);
@@ -102,4 +103,8 @@ void Space::Reset() {
 
 int Space::getHealth() {
     return health;
+}
+
+void Space::setHealth(int healthLevel) {
+    health = healthLevel * 3;
 }
