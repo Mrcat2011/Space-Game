@@ -41,6 +41,7 @@ enum State {
     GAME,
     MENU,
     SHOP,
+    SPEEDLEVEL,
     DIFFICULTY,
     MODE_SELECTION,
     QUIT
@@ -163,6 +164,14 @@ int main(int argc, char const *argv[]) {
     Color shopButtonColor = BLACK;
     Color quitButtonColor = BLACK;
     Color backButtonColor = BLACK;
+    Color SpeedUpgradeButtonColor = GREEN;
+    Color speedLevelShopColor;
+    Color SpeedPower1Color = darkBlue, SpeedPower2Color = darkBlue, SpeedPower3Color = darkBlue;
+    if (speedLevel == 3) {
+        speedLevelShopColor = GREEN;
+    } else {
+        speedLevelShopColor = BLACK;
+    }
 
     State state = MENU;
     Difficulty currentDifficulty = MEDIUM;
@@ -397,6 +406,10 @@ int main(int argc, char const *argv[]) {
         } else if (state == SHOP) {
             ClearBackground(darkBlue);
 
+            if (speedLevel == 3) {
+                speedLevelShopColor = GREEN;
+            }
+
             std::string Coin = std::to_string(coin);
             Vector2 pos_coin = {screenWidth - 120, 0};
             pos_coin.x = Coin.size() * 30 + 120;
@@ -408,19 +421,13 @@ int main(int argc, char const *argv[]) {
             DrawButton(backButton, "BACK", backButtonColor, {30, screenHeight - 50});
 
             Rectangle rec1 = {100, 100, 200, 200}; 
-            DrawRectangleRec(rec1, BLACK);
+            DrawRectangleRec(rec1, speedLevelShopColor);
             DrawTexture(speed_image, 90, 90, WHITE);
 
-            int cost_of_speed_powerup;
-            if (speedLevel == 1) {
-                cost_of_speed_powerup = 15;
-            } else if (speedLevel == 2) {
-                cost_of_speed_powerup = 30;
-            } else if (speedLevel == 3) {
-                cost_of_speed_powerup = 0;
-            }
+            
 
-            DrawText(std::to_string(cost_of_speed_powerup).c_str(), 150, 320, 35, WHITE);
+            std::string LevelMassage = std::to_string(speedLevel) + "/3";
+            DrawText(LevelMassage.c_str(), 180, 280, 15, WHITE);
 
 
             Vector2 mousePos2 = GetMousePosition();
@@ -436,12 +443,89 @@ int main(int argc, char const *argv[]) {
                 if (CheckCollisionPointRec(mousePos, backButton)) {
                     state = MENU;
                 } else if (CheckCollisionPointRec(mousePos, rec1)) {
-                    if (coin >= cost_of_speed_powerup && speedLevel < 3) {
-                        coin -= cost_of_speed_powerup;
-                        coin_data << coin << std::endl;
-                        speedLevel++;
-                        speed_data << speedLevel << std::endl;
-                    }
+                    // if (coin >= cost_of_speed_powerup && speedLevel < 3) {
+                    //     coin -= cost_of_speed_powerup;
+                    //     coin_data << coin << std::endl;
+                    //     speedLevel++;
+                    //     speed_data << speedLevel << std::endl;
+                    // }
+                    state = SPEEDLEVEL;
+                }
+            }  
+        } else if (state == SPEEDLEVEL) {
+            ClearBackground(darkBlue);
+            Rectangle backButton = {screenWidth - 200, screenHeight - 70, 200, 70};
+            DrawButton(backButton, "BACK", backButtonColor, {screenWidth - 170, screenHeight - 50});
+
+            Rectangle PowerRec1 = {50, 400, 50, 70};
+            Rectangle PowerRec2 = {50, 470, 50, 70};
+            Rectangle PowerRec3 = {50, 540, 50, 70};
+
+            int cost_of_speed_powerup;
+            if (speedLevel == 1) {
+                cost_of_speed_powerup = 15;
+            } else if (speedLevel == 2) {
+                cost_of_speed_powerup = 30;
+            } else if (speedLevel == 3) {
+                cost_of_speed_powerup = 0;
+            }
+
+            std::string UpgradeMassage = "UPGRADE FOR " + std::to_string(cost_of_speed_powerup);
+
+            Rectangle UpgradeButton = {400, 420, 400, 100};
+            DrawButton(UpgradeButton, UpgradeMassage.c_str(), SpeedUpgradeButtonColor, {420, 440});
+
+            if (speedLevel == 1) {
+                SpeedPower3Color = GREEN;
+            } else if (speedLevel == 2) {
+                SpeedPower2Color = GREEN;
+                SpeedPower3Color = GREEN;
+            } else if (speedLevel == 3) {
+                SpeedPower1Color = GREEN;
+                SpeedPower2Color = GREEN;
+                SpeedPower3Color = GREEN;
+            }
+
+            const char* UpgradeInformation;
+            if (speedLevel < 3) {
+                UpgradeInformation = "YOU WILL BE FASTER";
+            } else {
+                UpgradeInformation = "Your fast is full";
+            }
+            
+            DrawText(UpgradeInformation, 340, 100, 70, WHITE);
+
+
+            DrawRectangleRounded(PowerRec1, 0.3, 0, SpeedPower1Color);
+            DrawRectangleRounded(PowerRec2, 0.3, 0, SpeedPower2Color);
+            DrawRectangleRounded(PowerRec3, 0.3, 0, SpeedPower3Color);
+
+            DrawRectangleRoundedLines(PowerRec1, 0.3, 0, 5, WHITE);
+            DrawRectangleRoundedLines(PowerRec2, 0.3, 0, 5, WHITE);
+            DrawRectangleRoundedLines(PowerRec3, 0.3, 0, 5, WHITE);
+
+
+            DrawLine(300, 0, 300, screenHeight, WHITE);
+            DrawLine(0, 300, screenWidth, 300, WHITE);
+
+            DrawTexture(speed_image, 10, 10, WHITE);
+
+            Vector2 mousePos2 = GetMousePosition();
+            if (CheckCollisionPointRec(mousePos2, backButton)) {
+                backButtonColor = RED;
+            } else {
+                backButtonColor = BLACK;
+            }
+
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                Vector2 mousePos = GetMousePosition();
+                if (CheckCollisionPointRec(mousePos, backButton)) {
+                    state = SHOP;
+                } else if (CheckCollisionPointRec(mousePos, UpgradeButton) && coin >= cost_of_speed_powerup && speedLevel < 3) {
+                    coin -= cost_of_speed_powerup;
+                    coin_data << coin << std::endl;
+                    speedLevel++;
+                    speed_data << speedLevel << std::endl;
                 }
             }  
         }
