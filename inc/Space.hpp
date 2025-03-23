@@ -8,7 +8,7 @@ public:
     Space(const char* imagepath, Vector2 _pos, float scale);
     ~Space();
     void Draw();
-    void Update();
+    void Update(int speedLevel);
     Vector2 getPos() const;
     int getHealth();
     void setPos(Vector2 _pos);

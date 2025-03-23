@@ -24,17 +24,23 @@ const char* Endless = "assets/endless.png";
 const char* MeteorKillSound = "assets/kill3.wav";
 const char* SpaceKilledSound = "assets/kill1.wav";
 const char* MenuMusic = "assets/menuMusic.wav";
+const char* CoinImagPath = "assets/coin.png";
+const char* SpeedImagPath = "assets/sped.png";
+
 
 Color darkBlue = {1, 7, 28, 255};
 
 bool isPlayMusic = true;
 bool IsPlaySound = true;
 int score = 0;
+int coin = 0;
 float gameTimer = 60.0f;
+int speedLevel = 0;
 
 enum State {
     GAME,
     MENU,
+    SHOP,
     DIFFICULTY,
     MODE_SELECTION,
     QUIT
@@ -59,8 +65,28 @@ void Read(std::ofstream &file, int k) {
     }
 }
 
-int GetEndHighScore() {
-    std::ifstream file("Data/score.txt", std::ios::app);
+void SaveCoin(int coin) {
+    std::ofstream file("Data/coin.txt", std::ios::trunc); // Dosyanın üstüne yaz
+    if (file.is_open()) {
+        file << coin << "\n";
+    } else {
+        std::cerr << "Error: Could not open coin.txt for writing!\n";
+    }
+}
+
+int GetCoin () {
+    std::ifstream file("Data/coin.txt", std::ios::app);
+    std::string line;
+    std::string high_score;
+    while (getline(file, line)) {
+      high_score = line;
+    }
+    file.close();
+    return !high_score.empty() ? std::stoi(high_score) : 0;
+}
+
+int GetSpeedLevel () {
+    std::ifstream file("Data/SpeedLevel.txt", std::ios::app);
     std::string line;
     std::string high_score;
     while (getline(file, line)) {
@@ -108,6 +134,10 @@ int main(int argc, char const *argv[]) {
 
     std::ofstream score_data("Data/score.txt", std::ios::app);
     int high_score = GetMaxScore("Data/score.txt");
+    std::ofstream coin_data("Data/coin.txt", std::ios::app);
+    coin = GetCoin();
+    std::ofstream speed_data("Data/SpeedLevel.txt", std::ios::app);
+    speedLevel = GetSpeedLevel();
 
     Texture2D text = LoadTexture(BackgroundImagePath);
     Music music1 = LoadMusicStream(BackgroundMusicPath);
@@ -121,12 +151,18 @@ int main(int argc, char const *argv[]) {
     Texture2D music_on = LoadTexture(MusicOnButton);
     Texture2D music_off = LoadTexture(MusicOffButton);
     
+    
+    Texture2D coin_image = LoadTexture(CoinImagPath);
+    Texture2D speed_image = LoadTexture(SpeedImagPath);
+
     PlayMusicStream(music1);
     PlayMusicStream(music2);
     SetTargetFPS(60);
     
     Color playButtonColor = BLACK;
+    Color shopButtonColor = BLACK;
     Color quitButtonColor = BLACK;
+    Color backButtonColor = BLACK;
 
     State state = MENU;
     Difficulty currentDifficulty = MEDIUM;
@@ -161,7 +197,7 @@ int main(int argc, char const *argv[]) {
             }
 
             space.Draw();
-            space.Update();
+            space.Update(speedLevel);
             enemyManager.Update(bullets, space, IsPlaySound, meteorKillSound, spaceKilledSound, 0);  
             enemyManager.Draw();
             //camera.target.y = space.getPos().y;
@@ -169,6 +205,9 @@ int main(int argc, char const *argv[]) {
             if (!space.IsAlive()) {  
                 score_data << score << std::endl;
                 high_score = GetMaxScore("Data/score.txt");
+                coin += score;
+                coin_data << coin << std::endl;
+                
                 if (IsPlaySound) {
                     PlaySound(death_sound);
                 }
@@ -229,12 +268,21 @@ int main(int argc, char const *argv[]) {
             DrawText("SPACE", GetScreenWidth() / 2 - 150, GetScreenHeight() / 2 - 200, 100, WHITE);
             
             Rectangle playButton = {screenWidth / 2 - 100, screenHeight / 2, 200, 50};
-            Rectangle quitButton = {screenWidth / 2 - 100, screenHeight / 2 + 70, 200, 50};
+            Rectangle shopButton = {screenWidth / 2 - 100, screenHeight / 2 + 70, 200, 50};
+            Rectangle quitButton = {screenWidth / 2 - 100, screenHeight / 2 + 140, 200, 50};
             DrawButton(playButton, "Play", playButtonColor, {screenWidth / 2 - 70, screenHeight / 2 + 10});
-            DrawButton(quitButton, "Quit", quitButtonColor, {screenWidth / 2 - 70, screenHeight / 2 + 80});
+            DrawButton(shopButton, "Shop", shopButtonColor, {screenWidth / 2 - 70, screenHeight / 2 + 80});
+            DrawButton(quitButton, "Quit", quitButtonColor, {screenWidth / 2 - 70, screenHeight / 2 + 150});
 
             std::string highScore = "HIGH SCORE : " + std::to_string(high_score);
             DrawText(highScore.c_str(), 0, 0, 50, WHITE);
+
+            std::string Coin = std::to_string(coin);
+            Vector2 pos_coin = {screenWidth - 120, 0};
+            pos_coin.x = Coin.size() * 30 + 120;
+
+            DrawText(std::to_string(coin).c_str(), screenWidth - pos_coin.x, pos_coin.y, 80, WHITE);
+            DrawTexture(coin_image, screenWidth - 80, 0, WHITE);
 
             if (isPlayMusic) {
                 UpdateMusicStream(music2);
@@ -288,6 +336,11 @@ int main(int argc, char const *argv[]) {
             } else {
                 quitButtonColor = BLACK;
             }
+            if (CheckCollisionPointRec(mouse_pos2, shopButton)) {
+                shopButtonColor = RED;
+            } else {
+                shopButtonColor = BLACK;
+            }
 
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
@@ -296,6 +349,8 @@ int main(int argc, char const *argv[]) {
                     state = MODE_SELECTION;
                 } else if (CheckCollisionPointRec(mousePos, quitButton)) {
                     CloseWindow();
+                } else if (CheckCollisionPointRec(mousePos, shopButton)) {
+                    state = SHOP;
                 }
             }
         } else if (state == MODE_SELECTION) {
@@ -304,8 +359,10 @@ int main(int argc, char const *argv[]) {
             
             Rectangle timedButton = {0, 0, screenWidth, 200};
             Rectangle endlessButton = {0, 220, screenWidth, 200};
+            Rectangle backButton = {0, screenHeight - 70, 200, 70};
             DrawButton(timedButton, "Timed Mode", darkBlue, {200, 100});
             DrawButton(endlessButton, "Endless Mode", darkBlue, {200, 320});
+            DrawButton(backButton, "BACK", backButtonColor, {30, screenHeight - 50});
 
             static Texture2D clock = LoadTexture(Clock);
             static Texture2D endless = LoadTexture(Endless);
@@ -324,12 +381,76 @@ int main(int argc, char const *argv[]) {
                 } else if (CheckCollisionPointRec(mousePos, endlessButton)) {
                     gameMode = ENDLESS;
                     state = GAME;
+                } else if (CheckCollisionPointRec(mousePos, backButton)) {
+                    state = MENU;
                 }
+            }  
+
+            Vector2 mousePos2 = GetMousePosition();
+
+            if (CheckCollisionPointRec(mousePos2, backButton)) {
+                backButtonColor = RED;
+            } else {
+                backButtonColor = BLACK;
             }
+
+        } else if (state == SHOP) {
+            ClearBackground(darkBlue);
+
+            std::string Coin = std::to_string(coin);
+            Vector2 pos_coin = {screenWidth - 120, 0};
+            pos_coin.x = Coin.size() * 30 + 120;
+
+            DrawText(std::to_string(coin).c_str(), screenWidth - pos_coin.x, pos_coin.y, 80, WHITE);
+            DrawTexture(coin_image, screenWidth - 80, 0, WHITE);
+
+            Rectangle backButton = {0, screenHeight - 70, 200, 70};
+            DrawButton(backButton, "BACK", backButtonColor, {30, screenHeight - 50});
+
+            Rectangle rec1 = {100, 100, 200, 200}; 
+            DrawRectangleRec(rec1, BLACK);
+            DrawTexture(speed_image, 90, 90, WHITE);
+
+            int cost_of_speed_powerup;
+            if (speedLevel == 1) {
+                cost_of_speed_powerup = 15;
+            } else if (speedLevel == 2) {
+                cost_of_speed_powerup = 30;
+            } else if (speedLevel == 3) {
+                cost_of_speed_powerup = 0;
+            }
+
+            DrawText(std::to_string(cost_of_speed_powerup).c_str(), 150, 320, 35, WHITE);
+
+
+            Vector2 mousePos2 = GetMousePosition();
+
+            if (CheckCollisionPointRec(mousePos2, backButton)) {
+                backButtonColor = RED;
+            } else {
+                backButtonColor = BLACK;
+            }
+
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                Vector2 mousePos = GetMousePosition();
+                if (CheckCollisionPointRec(mousePos, backButton)) {
+                    state = MENU;
+                } else if (CheckCollisionPointRec(mousePos, rec1)) {
+                    if (coin >= cost_of_speed_powerup && speedLevel < 3) {
+                        coin -= cost_of_speed_powerup;
+                        coin_data << coin << std::endl;
+                        speedLevel++;
+                        speed_data << speedLevel << std::endl;
+                    }
+                }
+            }  
         }
         
         EndDrawing();
     }
+
+    SaveCoin(coin);
+
     CloseAudioDevice();
     CloseWindow();
     return 0;
