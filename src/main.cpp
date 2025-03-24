@@ -41,6 +41,7 @@ int healthLevel = 0;
 
 enum State {
   GAME,
+  PAUSE,
   MENU,
   SHOP,
   SPEEDLEVEL,
@@ -178,6 +179,7 @@ int main(int argc, char const *argv[]) {
   Color SpeedUpgradeButtonColor = GREEN, HealthUpgradeButtonColor = GREEN;
   Color speedLevelShopColor;
   Color healthLevelShopColor;
+  Color continuButtonColor = BLACK, menuButtonColor = BLACK;
   Color SpeedPower1Color = darkBlue, SpeedPower2Color = darkBlue,
         SpeedPower3Color = darkBlue;
   Color HealthPower1Color = darkBlue, HealthPower2Color = darkBlue,
@@ -214,6 +216,11 @@ int main(int argc, char const *argv[]) {
     if (state == GAME) {
       ClearBackground(BLACK);
       DrawTexture(text, 0, 0, WHITE);
+
+
+      if (IsKeyPressed(KEY_PAUSE)) {
+        state = PAUSE;
+      }
       // BeginMode2D(camera);
 
       if (isPlayMusic) {
@@ -227,7 +234,19 @@ int main(int argc, char const *argv[]) {
           high_score = GetMaxScore("Data/score.txt");
           coin += score;
           coin_data << coin << std::endl;
+  
+          if (IsPlaySound) {
+            PlaySound(death_sound);
+          }
           state = MENU;
+          score = 0;
+          gameTimer = 60.0f;
+          enemyManager.getEnemies().clear();
+          bullets.clear();
+          space.Reset();
+  
+          StopMusicStream(music1);
+          PlayMusicStream(music1);
         }
       }
 
@@ -404,6 +423,50 @@ int main(int argc, char const *argv[]) {
           state = SHOP;
         }
       }
+    } else if (state == PAUSE) {
+      ClearBackground(darkBlue);
+
+      DrawText("PAUSE", 500, 100, 70, WHITE);
+
+
+      Rectangle continueButton = {500, 250, 250, 70};
+      Rectangle menuButton = {500, 350, 250, 70};
+
+      DrawButton(continueButton, "CONTINUE", continuButtonColor, {525, 270});
+      DrawButton(menuButton, "MENU", menuButtonColor, {525, 370});
+
+
+      Vector2 mousePos = GetMousePosition();
+
+      if (CheckCollisionPointRec(mousePos, continueButton)) {
+        continuButtonColor = RED;
+      } else {
+        continuButtonColor = BLACK;
+      }
+
+      if (CheckCollisionPointRec(mousePos, menuButton)) {
+        menuButtonColor = RED;
+      } else {
+        menuButtonColor = BLACK;
+      }
+
+      if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        if (CheckCollisionPointRec(mousePos, continueButton)) {
+          state = GAME;
+        } 
+  
+        if (CheckCollisionPointRec(mousePos, menuButton)) {
+          state = MENU;
+          gameTimer = 60.0f;
+          enemyManager.getEnemies().clear();
+          bullets.clear();
+          space.Reset();
+  
+          StopMusicStream(music1);
+          PlayMusicStream(music1);
+        }
+      }
+
     } else if (state == MODE_SELECTION) {
       ClearBackground(darkBlue);
       // DrawText("Select Mode", GetScreenWidth() / 2 - 200, GetScreenHeight() /
