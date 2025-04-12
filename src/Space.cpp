@@ -1,4 +1,5 @@
 #include "../inc/Space.hpp"
+#include <stdio.h>
 
 Space::Space(const char* imagepath, Vector2 _pos, float scale, int HealthLevel) {
     pos = _pos;
@@ -72,6 +73,23 @@ void Space::Update(int speedLevel) {
             if (this->getPos().y + 3 <= GetScreenHeight() - 100) {
                 pos.y += speed1;
             }
+        }
+    }
+
+
+    if (IsGamepadAvailable(1) || IsGamepadAvailable(0)) {
+        if (IsGamepadButtonDown(1, GAMEPAD_BUTTON_MIDDLE_LEFT) || IsGamepadButtonDown(0, GAMEPAD_BUTTON_MIDDLE_LEFT)) {
+            if (IsGamepadButtonDown(1, GAMEPAD_BUTTON_RIGHT_FACE_LEFT)) {
+                if (this->getPos().x - 5 >= 0) {
+                    pos.x -= speed2;
+                }
+            } else {
+                if (this->getPos().x - 3 >= 0) {
+                    pos.x -= speed1;
+                }
+            }
+        } else {
+            printf("GAMEPAD WAS NOT FOUND\n");
         }
     }
 }

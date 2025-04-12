@@ -94,6 +94,31 @@ int GetSpeedLevel() {
   return !high_score.empty() ? std::stoi(high_score) : 0;
 }
 
+
+int GetSoundIsOpen() {
+  std::ifstream file("Data/Sound.txt", std::ios::app);
+  std::string line;
+  std::string high_score;
+  while (getline(file, line)) {
+    high_score = line;
+  }
+  file.close();
+  return !high_score.empty() ? std::stoi(high_score) : 0;
+}
+
+int GetMusicIsOpen() {
+  std::ifstream file("Data/Music.txt", std::ios::app);
+  std::string line;
+  std::string high_score;
+  while (getline(file, line)) {
+    high_score = line;
+  }
+  file.close();
+  return !high_score.empty() ? std::stoi(high_score) : 0;
+}
+
+
+
 int GetHealthLevel() {
   std::ifstream file("Data/HealthLevel.txt", std::ios::app);
   std::string line;
@@ -150,6 +175,10 @@ int main(int argc, char const *argv[]) {
   speedLevel = GetSpeedLevel();
   std::ofstream health_data("Data/HealthLevel.txt", std::ios::app);
   healthLevel = GetHealthLevel();
+  std::ofstream music_data("Data/Music.txt", std::ios::app);
+  isPlayMusic = bool(GetMusicIsOpen());
+  std::ofstream sound_data("Data/Sound.txt", std::ios::app);
+  IsPlaySound = bool(GetSoundIsOpen());
 
   Texture2D text = LoadTexture(BackgroundImagePath);
   Music music1 = LoadMusicStream(BackgroundMusicPath);
@@ -366,8 +395,10 @@ int main(int argc, char const *argv[]) {
             mouse_pos.y >= screenHeight - 50 && mouse_pos.y <= screenHeight) {
           if (IsPlaySound) {
             IsPlaySound = false;
+            sound_data << 0 << std::endl;
           } else {
             IsPlaySound = true;
+            sound_data << 1 << std::endl;
           }
         }
       }
@@ -378,8 +409,10 @@ int main(int argc, char const *argv[]) {
             mouse_pos.y >= screenHeight - 50 && mouse_pos.y <= screenHeight) {
           if (isPlayMusic) {
             isPlayMusic = false;
+            music_data << 0 << std::endl; 
           } else {
             isPlayMusic = true;
+            music_data << 1 << std::endl;
           }
         }
       }
