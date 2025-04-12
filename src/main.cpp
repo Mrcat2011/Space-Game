@@ -243,7 +243,7 @@ int main(int argc, char const *argv[]) {
           gameTimer = 60.0f;
           enemyManager.getEnemies().clear();
           bullets.clear();
-          space.Reset();
+          space.Reset(healthLevel);
   
           StopMusicStream(music1);
           PlayMusicStream(music1);
@@ -271,7 +271,7 @@ int main(int argc, char const *argv[]) {
         gameTimer = 60.0f;
         enemyManager.getEnemies().clear();
         bullets.clear();
-        space.Reset();
+        space.Reset(healthLevel);
 
         StopMusicStream(music1);
         PlayMusicStream(music1);
@@ -460,7 +460,7 @@ int main(int argc, char const *argv[]) {
           gameTimer = 60.0f;
           enemyManager.getEnemies().clear();
           bullets.clear();
-          space.Reset();
+          space.Reset(healthLevel);
   
           StopMusicStream(music1);
           PlayMusicStream(music1);

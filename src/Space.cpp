@@ -96,9 +96,9 @@ Rectangle Space::GetRect() const {
     return {pos.x, pos.y, text.width, text.height};
 }
 
-void Space::Reset() {
+void Space::Reset(int healthLevel) {
     pos = pos2;  
-    health = 3;        
+    health = healthLevel * 3;        
 }
 
 int Space::getHealth() {

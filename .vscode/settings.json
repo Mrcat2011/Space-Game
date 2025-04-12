@@ -94,5 +94,6 @@
         "typeindex": "cpp",
         "valarray": "cpp",
         "variant": "cpp"
-    }
+    },
+    "cmake.sourceDirectory": "/home/mrcat/Coding/GameDev/Space-Game/raylib"
 }

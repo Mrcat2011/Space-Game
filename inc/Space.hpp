@@ -15,7 +15,7 @@ public:
     void TakeDamage();  
     bool IsAlive() const;  
     Rectangle GetRect() const;  
-    void Reset();
+    void Reset(int healthLevel);
     void setHealth(int healthLevel);
 
 private:
